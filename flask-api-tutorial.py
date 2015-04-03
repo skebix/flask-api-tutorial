@@ -1,6 +1,12 @@
 from flask import Flask, url_for, request, json, Response, jsonify
+from functools import wraps
+import logging
 
 app = Flask(__name__)
+
+file_handler = logging.FileHandler('C:\\Users\\nessie\\PycharmProjects\\flask-api-tutorial\\app.log')
+app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
 
 @app.route('/')
 def api_root():
@@ -81,5 +87,43 @@ def api_users(userid):
     else:
         return not_found()
 
+def check_auth(username, password):
+    return username == 'admin' and password == 'secret'
+
+def authenticate():
+    message = {'message': 'Authenticate.'}
+    resp = jsonify(message)
+
+    resp.status_code = 401
+    resp.headers['WWW-Authenticate'] = 'Basic realm="Example"'
+
+    return resp
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth:
+            return authenticate()
+        elif not check_auth(auth.username, auth.password):
+            return authenticate()
+        return f(*args, **kwargs)
+
+    return decorated
+
+@app.route('/secrets')
+@requires_auth
+def api_secret():
+    return 'Secret.'
+
+@app.route('/hello3', methods = ['GET'])
+def api_hello3():
+    app.logger.info('informing')
+    app.logger.warning('warning')
+    app.logger.error('screaming bloody murder!')
+
+    return 'check your logs\n'
+
+
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
