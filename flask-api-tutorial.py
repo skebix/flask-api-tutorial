@@ -1,4 +1,4 @@
-from flask import Flask, url_for, request, json
+from flask import Flask, url_for, request, json, Response, jsonify
 
 app = Flask(__name__)
 
@@ -21,6 +21,20 @@ def api_hello():
     else:
         return 'Hello John Doe'
 
+@app.route('/hello2', methods = ['GET'])
+def api_hello2():
+    data = {
+        'hello': 'world',
+        'number': 3
+    }
+
+    resp = jsonify(data)
+    resp.status_code = 200
+
+    resp.headers['Link'] = 'http://skebix.com.ve'
+
+    return resp
+
 @app.route('/echo', methods=['GET', 'POST', 'PATCH', 'PUT', 'DELETE'])
 def api_echo():
     if request.method == 'GET':
@@ -35,7 +49,7 @@ def api_echo():
         return "ECHO: DELETE\n"
 
 @app.route('/messages', methods = ['POST'])
-def api_message():
+def api_messages():
     if request.headers['Content-Type'] == 'text/plain':
         return 'Text Message: ' + request.data
     elif request.headers['Content-Type'] == 'application/json':
@@ -47,6 +61,25 @@ def api_message():
         return 'Binary message written!'
     else:
         return '415 Unsupported Media Type ;)'
+
+@app.errorhandler(404)
+def not_found(error=None):
+    message = {
+        'status': 404,
+        'message': 'Not Found: ' + request.url,
+    }
+    resp = jsonify(message)
+    resp.status_code = 404
+
+    return resp
+
+@app.route('/users/<userid>', methods= ['GET'])
+def api_users(userid):
+    users = {'1': 'nessie', '2': 'skebix'}
+    if userid in users:
+        return jsonify({userid:users[userid]})
+    else:
+        return not_found()
 
 if __name__ == '__main__':
     app.run()
